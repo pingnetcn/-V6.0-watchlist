@@ -2,6 +2,9 @@
 
 Global CSS (max-width 100%, reduced padding, compact dataframe font) applies
 to all pages so dataframes fill the page width consistently.
+
+The home page redirects to page 1 (自选股) — that's what users want to see
+when they open the dashboard.
 """
 import streamlit as st
 
@@ -71,8 +74,7 @@ section.main,
 [data-testid="stToolbar"] { display: none !important; }
 </style>
 """
-# Inject twice: once via markdown, once via html (belt-and-suspenders)
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
-st.title("📊 陈氏鉴股V6.0 Watchlist Dashboard")
-st.info("左侧栏选页面 (11 pages) · 点击自选股 tab 看估值快照")
+# Redirect home → 自选股 page (page 1)
+st.switch_page("pages/1_📊_自选股.py")
