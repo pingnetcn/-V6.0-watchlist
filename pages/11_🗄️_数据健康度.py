@@ -35,7 +35,9 @@ cols[2].metric("🔴 异常", gh["red"])
 cols[3].metric("总表数", gh["green"] + gh["yellow"] + gh["red"])
 
 st.subheader("§1 表新鲜度")
-st.dataframe(health["table_freshness"], use_container_width=True)
+freshness_df = health["table_freshness"]
+height = min(800, max(200, len(freshness_df) * 28 + 60))
+st.dataframe(freshness_df, use_container_width=True, height=height, hide_index=True)
 
 st.subheader("§2 完整性矩阵 (Phase 3 完整版)")
 st.info("自选股 × 数据源交叉表")

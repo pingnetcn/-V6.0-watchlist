@@ -6,16 +6,6 @@ from lib import watchlist_store
 from lib.db import latest_for_codes
 from components.sidebar_watchlist import render_sidebar
 
-# Fill the page: no max-width, less padding, bigger font
-st.markdown(
-    "<style>"
-    ".block-container { max-width: 100% !important; padding-top: 1.5rem; padding-left: 1rem; padding-right: 1rem; }"
-    "h1 { margin-bottom: 0.5rem; }"
-    "[data-testid='stDataFrame'] { font-size: 0.85rem; }"
-    "</style>",
-    unsafe_allow_html=True,
-)
-
 
 def _fmt_pct(x):
     if x is None or (isinstance(x, float) and math.isnan(x)):

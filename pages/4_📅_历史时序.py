@@ -17,7 +17,11 @@ if mode == "单股":
 elif mode == "单日":
     target = st.date_input("日期", date.today() - timedelta(days=1))
     df = show_date(target)
-    st.dataframe(df, use_container_width=True)
+    if not df.empty:
+        height = min(1500, max(300, len(df) * 28 + 60))
+        st.dataframe(df, use_container_width=True, height=height, hide_index=True)
+    else:
+        st.info("该日期无数据")
 
 elif mode == "同股diff":
     code = st.text_input("股票代码", "000999", key="diff_code")

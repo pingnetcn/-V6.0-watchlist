@@ -10,4 +10,5 @@ if industry:
     if df.empty:
         st.warning("无数据")
     else:
-        st.dataframe(df, use_container_width=True)
+        height = min(1200, max(300, len(df) * 28 + 60))
+        st.dataframe(df, use_container_width=True, height=height, hide_index=True)

@@ -1,5 +1,6 @@
 """Page 10: 估值回测 — predict vs actual."""
 import streamlit as st
+import pandas as pd
 from lib.history_query import compute_valuation_accuracy
 
 st.title("📐 估值回测")
@@ -15,5 +16,17 @@ elif len(df) < 5:
 elif len(df) < 3:
     st.error(f"样本严重不足 ({len(df)} 行),无法回测")
 else:
-    st.line_chart(df.pivot_table(index="predict_date", columns="horizon_days", values="abs_error_pct"))
-    st.write("Sign correct rate:", df.groupby("horizon_days")["sign_correct"].mean())
+    st.line_chart(
+        df.pivot_table(index="predict_date", columns="horizon_days", values="abs_error_pct")
+    )
+
+    st.subheader("方向正确率 (按预测窗口)")
+    sign_df = df.groupby("horizon_days")["sign_correct"].mean().reset_index()
+    sign_df["sign_correct"] = sign_df["sign_correct"].apply(lambda x: f"{x:.1%}")
+    sign_df = sign_df.rename(columns={"horizon_days": "预测窗口(天)", "sign_correct": "方向正确率"})
+    st.dataframe(sign_df, use_container_width=True, height=200, hide_index=True)
+
+    st.subheader("原始回测数据")
+    st.caption(f"共 {len(df)} 行")
+    height = min(1500, max(300, len(df) * 28 + 60))
+    st.dataframe(df, use_container_width=True, height=height, hide_index=True)
