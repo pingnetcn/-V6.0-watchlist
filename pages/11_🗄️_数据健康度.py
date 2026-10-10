@@ -264,12 +264,16 @@ if st.button("🔄 Sync now (从主 DuckDB 同步到本地 replica)"):
                 capture_output=True, text=True, timeout=180,
                 cwd=_project_root,
             )
-            st.code(result.stdout[-3000:] if len(result.stdout) > 3000 else result.stdout)
+            # v6.97+ fix: Python 3.14 + text=True 偶发返回 None (process_group 提前结束?)
+            # 防御性 'or ""' 避免 len(None) 报错
+            _stdout = result.stdout or ""
+            _stderr = result.stderr or ""
+            st.code(_stdout[-3000:] if len(_stdout) > 3000 else _stdout)
             if result.returncode == 0:
                 st.success("✓ Sync 完成! 刷新页面查看新数据")
             else:
                 st.error(f"✗ Sync 失败 (exit {result.returncode})")
-                st.code(result.stderr[-1500:])
+                st.code(_stderr[-1500:])
         except subprocess.TimeoutExpired:
             st.error("✗ Sync 超时(>3 分钟)。主项目可能正在跑长时间 batch,稍后再试")
         except Exception as e:
