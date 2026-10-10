@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from lib import watchlist_store
 from lib.db import latest_for_codes
+from lib.ui_helpers import build_stock_options, stock_name_map
 
 st.title("⚖️ 跨股对比")
 
@@ -11,17 +12,25 @@ if df.empty:
     st.warning("自选股为空")
     st.stop()
 
-codes = st.multiselect(
-    "选股 (可多选)",
-    df["code"].tolist(),
-    default=df["code"].tolist()[:5],
+codes = df["code"].tolist()
+options = build_stock_options(codes, stock_name_map(codes))
+labels = [l for l, _ in options]
+values = [v for _, v in options]
+
+# Default: first 5
+selected_labels = st.multiselect(
+    "选股 (按名称排序,可多选)",
+    labels,
+    default=labels[:5],
 )
 
-if not codes:
+selected_codes = [values[labels.index(l)] for l in selected_labels]
+
+if not selected_codes:
     st.info("至少选一只")
     st.stop()
 
-snapshot = latest_for_codes(codes)
+snapshot = latest_for_codes(selected_codes)
 # 16 columns per spec §15.1
 COLS_ORDER = [
     "code", "name", "current_price", "intrinsic_value", "margin",
