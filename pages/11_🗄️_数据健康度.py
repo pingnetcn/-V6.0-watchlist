@@ -268,8 +268,12 @@ if st.button("🔄 Sync now (从主 DuckDB 同步到本地 replica)"):
 
 st.divider()
 
-# Other maintenance actions
-acknowledged = st.checkbox("☐ 我明白会暂时影响 8905")
+# Other maintenance actions (checkbox defaults to checked per user request)
+acknowledged = st.checkbox(
+    "☐ 我明白会暂时影响 8905",
+    value=True,
+    help="默认勾选。取消勾选会禁用下面的写操作按钮。",
+)
 for key, action in MAINTENANCE_ACTIONS.items():
     if action.get("readonly"):
         if st.button(action["label"]):
