@@ -34,7 +34,11 @@ RATING_ORDER = {"F": 0, "D": 1, "C": 2, "C+": 3, "B": 4, "B+": 5, "A": 6, "A+": 
 
 
 def get_candidate_codes(days: int, min_rating: str | None) -> pd.DataFrame:
-    """Get distinct codes with recent valuations, optionally filtered by rating."""
+    """Get distinct codes with recent valuations, optionally filtered by rating.
+
+    Filters out codes that don't exist in main's stock_basic (test/placeholder
+    codes like 600000-600008 that have valuations but no real company data).
+    """
     if not REPLICA_PATH.exists():
         print(f"[FAIL] Replica not found: {REPLICA_PATH}")
         print("       Run sync first: python -m scripts.sync_data")
@@ -64,6 +68,20 @@ def get_candidate_codes(days: int, min_rating: str | None) -> pd.DataFrame:
         ORDER BY code
     """
     df = conn.execute(sql, [cutoff]).df()
+
+    # Filter: only keep codes that exist in main's stock_basic (real companies)
+    try:
+        real_codes = set(conn.execute(
+            "SELECT code FROM stock_basic WHERE code IS NOT NULL"
+        ).df()["code"].astype(str).tolist())
+        before = len(df)
+        df = df[df["code"].astype(str).isin(real_codes)]
+        filtered = before - len(df)
+        if filtered:
+            print(f"  Filtered {filtered} codes not in main stock_basic (test/placeholder)")
+    except Exception as e:
+        print(f"  [WARN] Could not filter by stock_basic: {e}")
+
     conn.close()
 
     # Apply rating filter if specified
