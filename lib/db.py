@@ -135,8 +135,13 @@ def latest_for_codes(codes: list[str]) -> pd.DataFrame:
 
 
 def industry_benchmark(industry: str) -> pd.DataFrame:
+    """Query v_industry_benchmark by industry name.
+
+    v_industry_benchmark columns are in Chinese (行业, 公司数, PE_TTM中位数, etc.)
+    The main project's view is created by scripts/fix_v_industry_benchmark.py.
+    """
     return get_conn().execute(
-        "SELECT * FROM v_industry_benchmark WHERE industry = ?", [industry]
+        'SELECT * FROM v_industry_benchmark WHERE "行业" = ?', [industry]
     ).df()
 
 
