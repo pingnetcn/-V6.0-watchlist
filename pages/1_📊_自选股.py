@@ -97,6 +97,28 @@ with tab1:
     display_df = snapshot[[c for c in DISPLAY_COLS if c in snapshot.columns]].copy()
     display_df = display_df.rename(columns=COLUMN_LABELS)
 
+    # Sort selector
+    sort_options = {
+        "安全边际% (降序)": ("margin", False),
+        "安全边际% (升序)": ("margin", True),
+        "评估价 (降序)": ("intrinsic_value", False),
+        "现价 (降序)": ("current_price", False),
+        "5y加权 (降序)": ("weighted_5y", False),
+        "30%买入距% (降序)": ("dist_to_buy_30", False),
+        "估值日期 (降序)": ("valuation_date", False),
+    }
+    sort_label = st.selectbox(
+        "排序", list(sort_options.keys()),
+        index=0, label_visibility="collapsed"
+    )
+    sort_col, ascending = sort_options[sort_label]
+    sort_col_label = COLUMN_LABELS.get(sort_col, sort_col)
+    if sort_col_label in display_df.columns:
+        sort_raw = pd.to_numeric(display_df[sort_col_label], errors="coerce")
+        display_df = display_df.assign(_sort_key=sort_raw).sort_values(
+            "_sort_key", ascending=ascending, na_position="last"
+        ).drop(columns=["_sort_key"])
+
     # Apply per-column formatters
     for col, fmt in FORMATTERS.items():
         if col in display_df.columns:
