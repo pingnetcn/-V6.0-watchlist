@@ -72,14 +72,21 @@ def test_isol_4_quality_check_makes_no_llm_calls():
         assert forbidden not in src, f"LLM reference in lib/completeness.py: {forbidden}"
 
 
-def test_isol_5_maintenance_button_disabled_by_default():
-    """Page 11 §4 buttons default disabled; require explicit checkbox."""
+def test_isol_5_maintenance_button_enabled_by_default():
+    """Page 11 §4 buttons enabled by default (checkbox pre-checked per user request).
+
+    Safety: user still has the option to UNCHECK the box to disable buttons.
+    Isolation guarantee: write actions (a股/hk_kline/watchlist_revaluation)
+    are only triggered by explicit button click in the UI.
+    """
     from streamlit.testing.v1 import AppTest
     page_path = str(Path(__file__).parent.parent / "pages" / "11_🗄️_数据健康度.py")
     at = AppTest.from_file(page_path).run()
     btns = [b for b in at.button if "触发" in str(b.label)]
     for btn in btns:
-        assert btn.disabled is True, f"Button {btn.label} should be disabled by default"
+        assert btn.disabled is False, (
+            f"Button {btn.label} should be enabled (checkbox defaults to checked)"
+        )
 
 
 def test_isol_6_killing_watchlist_does_not_affect_main():
