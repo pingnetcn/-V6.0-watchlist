@@ -14,14 +14,22 @@ st.set_page_config(
 
 # Global CSS via st.markdown(unsafe_allow_html) — more reliable than st.html()
 # for re-injection across streamlit reruns (tab switches, button clicks).
-# Triple-redundant targeting so CSS survives browser cache misses.
+# Multi-target: hit EVERY possible container that might constrain width.
 GLOBAL_CSS = """
 <style>
-/* === Force full width container (overrides streamlit default 80% cap) === */
-html, body { width: 100% !important; min-width: 100vw !important; }
+/* === Body + html === */
+html, body, [data-testid="stApp"] {
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+}
+
+/* === Block container (main content wrapper) === */
 .block-container,
 [data-testid="stAppViewContainer"] .main .block-container,
-section.main .block-container {
+[data-testid="stAppViewContainer"] > section > div > div,
+section.main .block-container,
+.main .block-container {
     max-width: 100vw !important;
     min-width: 100vw !important;
     width: 100vw !important;
@@ -32,14 +40,18 @@ section.main .block-container {
 }
 h1 { margin-bottom: 0.5rem; }
 
-/* === Streamlit main section also full width === */
+/* === Streamlit main section + app view container === */
+[data-testid="stAppViewContainer"],
 [data-testid="stAppViewContainer"] > section,
-[data-testid="stAppViewContainer"] > section > div {
+[data-testid="stAppViewContainer"] > section > div,
+[data-testid="stAppViewContainer"] > section > div > div,
+section.main,
+.main {
     max-width: 100vw !important;
     width: 100% !important;
 }
 
-/* === DataFrame fills its container === */
+/* === DataFrame + iframe === */
 [data-testid="stDataFrame"],
 [data-testid="stDataFrame"] > div,
 [data-testid="stDataFrame"] iframe {
@@ -59,6 +71,7 @@ h1 { margin-bottom: 0.5rem; }
 [data-testid="stToolbar"] { display: none !important; }
 </style>
 """
+# Inject twice: once via markdown, once via html (belt-and-suspenders)
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 st.title("📊 陈氏鉴股V6.0 Watchlist Dashboard")
