@@ -75,6 +75,32 @@ def open_main_with_retry(max_attempts: int = 60, sleep: float = 2.0):
     raise RuntimeError(f"Could not open main DB after {max_attempts} retries (~{max_attempts * sleep}s)")
 
 
+def _replica_locked_check() -> str | None:
+    """检测 replica DB 是否被其他进程持有 (watchlist Streamlit 8910 读锁).
+
+    Returns: 错误信息字符串 (锁定时) / None (可写).
+    v6.97.10+: 在 sync 写入 replica 前检测, 给出可操作的提示 (停 watchlist → 跑 sync → 重启).
+
+    设计: 用 read_only=False 探测 (试拿写锁) — DuckDB 多 read_only 可并存, 但写锁互斥.
+    """
+    try:
+        probe = duckdb.connect(str(REPLICA_DB), read_only=False)
+        probe.close()
+    except duckdb.IOException as e:
+        msg = str(e)
+        if "另一个程序正在使用" in msg or "being used" in msg or "locked" in msg:
+            return (
+                f"Replica DB 被 watchlist Streamlit (8910) 持有读锁.\n"
+                f"  DuckDB 不允许 write 同时另一进程 read-only.\n"
+                f"  修法 3 步:\n"
+                f"    1. taskkill //F //PID <watchlist_pid>    (停 watchlist)\n"
+                f"    2. .venv/Scripts/python.exe -m scripts.sync_watchlist_data\n"
+                f"    3. restart.bat           (重启)\n"
+                f"  原错误: {msg[:120]}"
+            )
+    return None
+
+
 def sync(tables: list) -> dict:
     """Sync specified tables from main to replica. Returns sync stats."""
     print(f"[{datetime.now().isoformat(timespec='seconds')}] Starting sync")
@@ -84,6 +110,11 @@ def sync(tables: list) -> dict:
 
     src = open_main_with_retry()
     print("  [OK] Main DB opened (read-only)")
+
+    # v6.97.10+: 在打开 replica 前检测是否被 watchlist Streamlit 持有, 避免中途失败
+    locked_msg = _replica_locked_check()
+    if locked_msg:
+        raise RuntimeError(locked_msg)
 
     REPLICA_DB.parent.mkdir(parents=True, exist_ok=True)
     dst = duckdb.connect(str(REPLICA_DB), read_only=False)
@@ -174,10 +205,14 @@ def main():
         sync(tables)
     except Exception as e:
         print(f"\n[FAIL] Sync FAILED: {e}")
-        print("\nTo sync, you may need to briefly stop the main project (8905):")
-        print("  1. Stop main streamlit process")
-        print("  2. Run this script: python -m scripts.sync_watchlist_data")
-        print("  3. Restart main streamlit")
+        # v6.97.10+: 副本被 8910 watchlist 持有是常见冲突, 提示用户操作步骤
+        if "Replica DB" in str(e) or "8910" in str(e):
+            print("\n→ watchlist Streamlit (8910) 必须先停, 才能跑 sync.")
+        else:
+            print("\nTo sync, you may need to briefly stop the watchlist project (8910):")
+            print("  1. Stop watchlist streamlit (port 8910)")
+            print("  2. Run this script: python -m scripts.sync_watchlist_data")
+            print("  3. Restart watchlist streamlit")
         sys.exit(1)
 
 

@@ -255,9 +255,14 @@ st.subheader("🔄 F. 维护操作")
 if st.button("🔄 Sync now (从主 DuckDB 同步到本地 replica)"):
     with st.spinner("Sync 进行中… (主项目忙时最多重试 2 分钟)"):
         try:
+            # v6.97+ fix: Windows Popen + 相对路径 抛 [WinError 2] — 必须用绝对路径
+            import os as _os
+            _project_root = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+            _vpy = _os.path.join(_project_root, ".venv", "Scripts", "python.exe")
             result = subprocess.run(
-                [".venv/Scripts/python.exe", "-m", "scripts.sync_watchlist_data"],
+                [_vpy, "-m", "scripts.sync_watchlist_data"],
                 capture_output=True, text=True, timeout=180,
+                cwd=_project_root,
             )
             st.code(result.stdout[-3000:] if len(result.stdout) > 3000 else result.stdout)
             if result.returncode == 0:
