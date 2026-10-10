@@ -14,16 +14,29 @@ def compute_full_health() -> dict:
     today = date.today()
     green, yellow, red = 0, 0, 0
     for _, row in tf.iterrows():
-        if row["max_date"] is None:
+        md = row["max_date"]
+        # Handle None, NaT, NaN
+        if md is None or pd.isna(md):
             red += 1
-        elif isinstance(row["max_date"], (date, pd.Timestamp)):
-            days = (today - pd.Timestamp(row["max_date"]).date()).days
-            if days <= 1:
-                green += 1
-            elif days <= 3:
-                yellow += 1
-            else:
+            continue
+        # Normalize to date
+        if isinstance(md, pd.Timestamp):
+            md_date = md.date()
+        elif isinstance(md, date):
+            md_date = md
+        else:
+            try:
+                md_date = pd.Timestamp(md).date()
+            except Exception:
                 red += 1
+                continue
+        days = (today - md_date).days
+        if days <= 1:
+            green += 1
+        elif days <= 3:
+            yellow += 1
+        else:
+            red += 1
     return {
         "table_freshness": tf,
         "global_health": {"green": green, "yellow": yellow, "red": red},
