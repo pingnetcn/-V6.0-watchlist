@@ -19,39 +19,6 @@ def _fmt_price(x):
     return f"{x:.2f}"
 
 
-def _fmt_failure_modes(val):
-    """Format failure_modes (comma-separated codes) as count + first 2 codes."""
-    if val is None or (isinstance(val, float) and math.isnan(val)):
-        return ""
-    if not val or str(val).strip() == "":
-        return "0"
-    codes = [c.strip() for c in str(val).split(",") if c.strip()]
-    if not codes:
-        return "0"
-    if len(codes) <= 2:
-        return f"{len(codes)}({','.join(codes)})"
-    return f"{len(codes)}({','.join(codes[:2])}...)"
-
-
-# 15 columns: 估值核心 + 风险信号 + 行动信号
-DISPLAY_COLS = [
-    "code", "name", "industry", "valuation_date",
-    "current_price", "intrinsic_value", "margin", "rating",
-    "credibility", "main_method", "methods_spread",
-    "bull_price_5y", "bear_price_5y", "weighted_5y",
-    "dist_to_buy_30", "failure_modes",
-]
-COLUMN_LABELS = {
-    "code": "代码", "name": "名称", "industry": "行业",
-    "valuation_date": "估值日期", "current_price": "现价",
-    "intrinsic_value": "评估价", "margin": "安全边际%",
-    "rating": "评级", "credibility": "可信度",
-    "main_method": "主推方法", "methods_spread": "方法分歧%",
-    "bull_price_5y": "5y牛", "bear_price_5y": "5y熊",
-    "weighted_5y": "5y加权", "dist_to_buy_30": "30%买入距%",
-    "failure_modes": "失败模式",
-}
-
 # Per-column formatters
 FORMATTERS = {
     "安全边际%": _fmt_pct,
@@ -62,7 +29,25 @@ FORMATTERS = {
     "5y牛": _fmt_price,
     "5y熊": _fmt_price,
     "5y加权": _fmt_price,
-    "失败模式": _fmt_failure_modes,
+}
+
+
+# 14 columns: 估值核心 + 风险信号 + 行动信号 (失败模式被方法分歧替代 — 类似信息,避免冗余)
+DISPLAY_COLS = [
+    "code", "name", "industry", "valuation_date",
+    "current_price", "intrinsic_value", "margin", "rating",
+    "credibility", "main_method", "methods_spread",
+    "bull_price_5y", "bear_price_5y", "weighted_5y",
+    "dist_to_buy_30",
+]
+COLUMN_LABELS = {
+    "code": "代码", "name": "名称", "industry": "行业",
+    "valuation_date": "估值日期", "current_price": "现价",
+    "intrinsic_value": "评估价", "margin": "安全边际%",
+    "rating": "评级", "credibility": "可信度",
+    "main_method": "主推方法", "methods_spread": "方法分歧%",
+    "bull_price_5y": "5y牛", "bear_price_5y": "5y熊",
+    "weighted_5y": "5y加权", "dist_to_buy_30": "30%买入距%",
 }
 
 # Column widths in pixels (total target ~ 1400-1800 for 15 cols on wide screen)
