@@ -55,10 +55,19 @@ if result and result.get("buy_list"):
 
     if result.get("sector_allocation"):
         st.subheader("行业分布")
-        sector_df = pd.DataFrame([
-            {"行业": k, "权重": f"{v:.1%}"}
-            for k, v in sorted(result["sector_allocation"].items(), key=lambda x: -x[1])
-        ])
+        # Handle both flat {sector: weight} and nested {sector: {weight, count, names}}
+        sector_rows = []
+        for k, v in result["sector_allocation"].items():
+            if isinstance(v, dict):
+                weight = v.get("weight", 0)
+                count = v.get("count", 0)
+            else:
+                weight = float(v)
+                count = 0
+            sector_rows.append({"行业": k, "权重": f"{weight:.1%}", "数量": count})
+        sector_df = pd.DataFrame(
+            sorted(sector_rows, key=lambda x: float(x["权重"].rstrip("%")), reverse=True)
+        )
         st.dataframe(sector_df, width="stretch", height=300, hide_index=True)
 else:
     st.info("无可信标的 (no BUY recommendations)")
