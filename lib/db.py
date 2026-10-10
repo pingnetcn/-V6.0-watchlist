@@ -1,13 +1,21 @@
 """
 Read-only DuckDB access layer for valuation_history + table freshness.
 
+Uses LOCAL REPLICA (E:/stock_db/.watchlist_data.duckdb) populated by
+scripts/sync_watchlist_data.py — NOT main DB directly. This avoids the
+file-lock conflict with main project (8905) which holds the source DuckDB
+with exclusive write locks (see db_core.py monkey-patch + _kline.py
+read_only=False long conns).
+
+Sync schedule: manual via page 11 button, or cron every 5 min.
+
 How to extend:
     Add new query function following naming: <noun>_<verb>(<filters>) -> DataFrame
     All queries MUST go through get_conn() — never open ad-hoc connections
     NEVER add write functions; this module is read-only by design
 
 Public API:
-    get_conn() -> duckdb.DuckDBPyConnection      (read_only=True, singleton with retry)
+    get_conn() -> duckdb.DuckDBPyConnection      (read_only=True, singleton)
     valuation_history_query(code, since, until, limit) -> DataFrame
     valuation_snapshot(target_date) -> DataFrame
     latest_for_codes(codes) -> DataFrame
@@ -15,77 +23,74 @@ Public API:
     table_freshness() -> DataFrame
     coverage_stats(table, column) -> dict
     column_exists(table, column) -> bool
+    get_sync_status() -> dict
 """
-import time
 import duckdb
 import pandas as pd
 from typing import Optional
 from datetime import date
+from pathlib import Path
 from lib.paths import DB_PATH
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # bumped: now reads from replica, not main
+
+# Watchlist reads from LOCAL REPLICA, not main DB.
+# The replica is populated by scripts/sync_watchlist_data.py.
+REPLICA_PATH = Path(DB_PATH).parent / ".watchlist_data.duckdb"
 
 CORE_TABLES = [
-    ("stock_daily", "trade_date"),
-    ("stock_basic", None),
-    ("stock_technical", "trade_date"),
-    ("v_financial_metrics", "report_date"),
-    ("v_share_structure", "report_date"),
     ("valuation_history", "valuation_date"),
-    ("hk_stock_basic", None),
-    ("hk_stock_daily", "trade_date"),
-    ("hk_stock_technical", "trade_date"),
-    ("hk_daily_valuation", "trade_date"),
-    ("hk_valuation_cache", "ts"),
+    ("stock_daily", "trade_date"),
+    ("v_industry_benchmark", None),
 ]
 
 _conn = None
 
 
-def _is_alive(conn) -> bool:
-    try:
-        conn.execute("SELECT 1").df()
-        return True
-    except Exception:
-        return False
-
-
 def get_conn() -> duckdb.DuckDBPyConnection:
-    """Get read-only DuckDB connection with retry on file-lock conflicts.
+    """Get read-only DuckDB connection to LOCAL REPLICA.
 
-    Main project (port 8905) often holds the DuckDB file briefly during writes.
-    DuckDB 1.5.6 on Windows can refuse concurrent opens even for read_only.
-    We retry up to 8 times (totaling ~6s of backoff) before giving up.
+    Raises clear error if replica doesn't exist (user needs to run sync).
+    No lock conflict with main project because replica is a separate file.
     """
     global _conn
-    if _conn is not None and _is_alive(_conn):
-        return _conn
-    if _conn is not None:
+    if _conn is None:
+        if not REPLICA_PATH.exists():
+            raise RuntimeError(
+                f"Watchlist replica not found: {REPLICA_PATH}\n"
+                f"Run sync first: `python -m scripts.sync_watchlist_data`\n"
+                f"Or click 'Sync now' button on page 11 (data health)."
+            )
+        _conn = duckdb.connect(str(REPLICA_PATH), read_only=True)
+    return _conn
+
+
+def get_sync_status() -> dict:
+    """Get last sync timestamp + row counts. Returns dict with timestamps and per-table counts."""
+    if not REPLICA_PATH.exists():
+        return {"exists": False, "path": str(REPLICA_PATH)}
+    try:
+        conn = duckdb.connect(str(REPLICA_PATH), read_only=True)
+        result = {"exists": True, "path": str(REPLICA_PATH), "tables": {}}
+        # Get sync_log if it exists
         try:
-            _conn.close()
+            logs = conn.execute(
+                "SELECT ts, table_name, rows_synced, duration_ms FROM sync_log ORDER BY id DESC LIMIT 10"
+            ).df()
+            result["recent_syncs"] = logs.to_dict("records")
         except Exception:
-            pass
-        _conn = None
-
-    last_err = None
-    for attempt in range(8):
-        try:
-            _conn = duckdb.connect(str(DB_PATH), read_only=True)
-            return _conn
-        except duckdb.IOException as e:
-            last_err = e
-            msg = str(e).lower()
-            if "already open" in msg or "locked" in msg or "being used" in msg:
-                time.sleep(0.2 * (attempt + 1))  # 0.2, 0.4, ..., 1.6
-                continue
-            raise
-
-    raise RuntimeError(
-        f"DuckDB file is held by another process (likely main 8905 doing a write). "
-        f"After 8 retries (~6s), could not open {DB_PATH}. "
-        f"Either wait for main to finish, or briefly stop the main app. "
-        f"Underlying error: {last_err}"
-    )
+            result["recent_syncs"] = []
+        # Row counts for CORE_TABLES
+        for table, _ in CORE_TABLES:
+            try:
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                result["tables"][table] = count
+            except Exception:
+                result["tables"][table] = None
+        conn.close()
+        return result
+    except Exception as e:
+        return {"exists": True, "path": str(REPLICA_PATH), "error": str(e)}
 
 
 def valuation_history_query(
