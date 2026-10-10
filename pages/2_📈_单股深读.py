@@ -31,6 +31,8 @@ st.caption(f"Version: {report['metadata'].get('version', '?')}")
 
 render_full(report["metadata"])
 
+# Show all sections expanded by default (use markdown, not expander)
 for num, body in sorted(report["sections"].items()):
-    with st.expander(f"§{num}"):
-        st.markdown(body)
+    st.subheader(f"§{num}")
+    st.markdown(body)
+    st.divider()
