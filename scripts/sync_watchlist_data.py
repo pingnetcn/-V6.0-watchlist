@@ -89,10 +89,9 @@ def sync(tables: list) -> dict:
     dst = duckdb.connect(str(REPLICA_DB), read_only=False)
     print("  [OK] Replica DB opened (read-write)")
 
-    # Create sync_log table
+    # Create sync_log table (DuckDB 1.5.6 doesn't support IDENTITY; use ts as natural sort key)
     dst.execute("""
         CREATE TABLE IF NOT EXISTS sync_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
             ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             table_name VARCHAR,
             rows_synced INTEGER,
