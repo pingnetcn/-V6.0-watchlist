@@ -1,3 +1,7 @@
+# Versions bumped from plan's pin (streamlit==1.39.0 / duckdb==0.10.9 / pandas==2.2.2 /
+# plotly==5.22.0 / pytest==8.3.2) because venv's Python 3.14.6 has no cp314 wheels
+# for those pinned versions. App verified to import + run on bumped versions.
+# If Python is downgraded to 3.11/3.12 later, these can be re-pinned to spec.
 streamlit==1.65.0
 plotly==7.1.0
 duckdb==1.5.6

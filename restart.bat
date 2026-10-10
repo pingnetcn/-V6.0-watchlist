@@ -12,7 +12,7 @@ if exist lib\__pycache__ rmdir /s /q lib\__pycache__ 2>nul
 if exist components\__pycache__ rmdir /s /q components\__pycache__ 2>nul
 if exist pages\__pycache__ rmdir /s /q pages\__pycache__ 2>nul
 start /b "" .venv\Scripts\python.exe -m streamlit run app.py --server.address 0.0.0.0 --server.port 8910 --server.headless true
-timeout /t 8 /nobreak >nul
+ping -n 9 127.0.0.1 >nul 2>&1
 echo HTTP check:
 curl -s -o /dev/null -w "  8910 = %%{http_code}\n" http://127.0.0.1:8910/
 curl -s -o /dev/null -w "  8905 = %%{http_code}\n" http://127.0.0.1:8905/
