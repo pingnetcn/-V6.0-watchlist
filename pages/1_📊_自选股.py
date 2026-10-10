@@ -6,11 +6,12 @@ from lib import watchlist_store
 from lib.db import latest_for_codes
 from components.sidebar_watchlist import render_sidebar
 
-# Reduce top padding so dataframe has more vertical room
+# Fill the page: no max-width, less padding, bigger font
 st.markdown(
     "<style>"
-    ".block-container { padding-top: 2rem; padding-bottom: 0rem; }"
+    ".block-container { max-width: 100% !important; padding-top: 1.5rem; padding-left: 1rem; padding-right: 1rem; }"
     "h1 { margin-bottom: 0.5rem; }"
+    "[data-testid='stDataFrame'] { font-size: 0.85rem; }"
     "</style>",
     unsafe_allow_html=True,
 )
@@ -74,6 +75,15 @@ FORMATTERS = {
     "失败模式": _fmt_failure_modes,
 }
 
+# Column widths in pixels (total target ~ 1400-1800 for 15 cols on wide screen)
+COL_WIDTHS = {
+    "代码": 70, "名称": 110, "行业": 110, "估值日期": 110,
+    "现价": 70, "评估价": 80, "安全边际%": 80, "评级": 60,
+    "可信度": 70, "主推方法": 110, "方法分歧%": 75,
+    "5y牛": 70, "5y熊": 70, "5y加权": 70,
+    "30%买入距%": 90, "失败模式": 100,
+}
+
 render_sidebar()
 st.title("📊 自选股")
 
@@ -102,14 +112,21 @@ with tab1:
         if col in display_df.columns:
             display_df[col] = display_df[col].apply(fmt)
 
+    # Build column_config for explicit widths (so the table fills the page)
+    col_config = {
+        label: st.column_config.Column(label, width=width)
+        for label, width in COL_WIDTHS.items()
+        if label in display_df.columns
+    }
+
     st.caption(f"共 {len(display_df)} 只股票 · 按 valuation_date 降序")
-    # ~28px per row, capped at 1500px (Streamlit recommended max)
     dynamic_height = min(1500, max(400, len(display_df) * 28 + 60))
     st.dataframe(
         display_df,
         use_container_width=True,
         height=dynamic_height,
         hide_index=True,
+        column_config=col_config,
     )
 
 with tab2:
