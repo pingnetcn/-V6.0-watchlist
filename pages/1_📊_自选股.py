@@ -28,6 +28,52 @@ def _fmt_price(x):
     return f"{x:.2f}"
 
 
+def _fmt_failure_modes(val):
+    """Format failure_modes (comma-separated codes) as count + first 2 codes."""
+    if val is None or (isinstance(val, float) and math.isnan(val)):
+        return ""
+    if not val or str(val).strip() == "":
+        return "0"
+    codes = [c.strip() for c in str(val).split(",") if c.strip()]
+    if not codes:
+        return "0"
+    if len(codes) <= 2:
+        return f"{len(codes)}({','.join(codes)})"
+    return f"{len(codes)}({','.join(codes[:2])}...)"
+
+
+# 15 columns: 估值核心 + 风险信号 + 行动信号
+DISPLAY_COLS = [
+    "code", "name", "industry", "valuation_date",
+    "current_price", "intrinsic_value", "margin", "rating",
+    "credibility", "main_method", "methods_spread",
+    "bull_price_5y", "bear_price_5y", "weighted_5y",
+    "dist_to_buy_30", "failure_modes",
+]
+COLUMN_LABELS = {
+    "code": "代码", "name": "名称", "industry": "行业",
+    "valuation_date": "估值日期", "current_price": "现价",
+    "intrinsic_value": "评估价", "margin": "安全边际%",
+    "rating": "评级", "credibility": "可信度",
+    "main_method": "主推方法", "methods_spread": "方法分歧%",
+    "bull_price_5y": "5y牛", "bear_price_5y": "5y熊",
+    "weighted_5y": "5y加权", "dist_to_buy_30": "30%买入距%",
+    "failure_modes": "失败模式",
+}
+
+# Per-column formatters
+FORMATTERS = {
+    "安全边际%": _fmt_pct,
+    "方法分歧%": _fmt_pct,
+    "30%买入距%": _fmt_pct,
+    "现价": _fmt_price,
+    "评估价": _fmt_price,
+    "5y牛": _fmt_price,
+    "5y熊": _fmt_price,
+    "5y加权": _fmt_price,
+    "失败模式": _fmt_failure_modes,
+}
+
 render_sidebar()
 st.title("📊 自选股")
 
@@ -37,20 +83,6 @@ df = watchlist_store.list_all()
 if df.empty:
     st.info("📥 自选股为空。可在侧栏添加,或运行 scripts/import_candidate_pool.py")
     st.stop()
-
-# Pick 10 most useful columns (drop id, redundant metadata)
-DISPLAY_COLS = [
-    "code", "name", "industry", "valuation_date",
-    "current_price", "intrinsic_value", "margin", "rating",
-    "credibility", "bull_price_5y",
-]
-COLUMN_LABELS = {
-    "code": "代码", "name": "名称", "industry": "行业",
-    "valuation_date": "估值日期", "current_price": "现价",
-    "intrinsic_value": "评估价", "margin": "安全边际%",
-    "rating": "评级", "credibility": "可信度",
-    "bull_price_5y": "5y牛",
-}
 
 with tab1:
     codes = df["code"].tolist()
@@ -65,15 +97,13 @@ with tab1:
     display_df = snapshot[[c for c in DISPLAY_COLS if c in snapshot.columns]].copy()
     display_df = display_df.rename(columns=COLUMN_LABELS)
 
-    # Format columns for visual clarity
-    if "安全边际%" in display_df.columns:
-        display_df["安全边际%"] = display_df["安全边际%"].apply(_fmt_pct)
-    for col in ["现价", "评估价", "5y牛"]:
+    # Apply per-column formatters
+    for col, fmt in FORMATTERS.items():
         if col in display_df.columns:
-            display_df[col] = display_df[col].apply(_fmt_price)
+            display_df[col] = display_df[col].apply(fmt)
 
     st.caption(f"共 {len(display_df)} 只股票 · 按 valuation_date 降序")
-    # Calculate height: ~28px per row, capped at 1500px (Streamlit recommended max)
+    # ~28px per row, capped at 1500px (Streamlit recommended max)
     dynamic_height = min(1500, max(400, len(display_df) * 28 + 60))
     st.dataframe(
         display_df,
