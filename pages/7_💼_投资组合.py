@@ -2,21 +2,24 @@
 import streamlit as st
 import pandas as pd
 from lib.portfolio import rank
+from lib import watchlist_store
 
 st.title("💼 投资组合")
 
-# Cache rank() result in session_state, auto-compute on first load
-if "portfolio_rebalance" not in st.session_state:
+# Always recompute on page load (auto-refresh when watchlist changes)
+# Use watchlist count as cache key — invalidates when stocks are added/removed
+wl_count = len(watchlist_store.list_all())
+cache_key = f"portfolio_rebalance_v_{wl_count}"
+if cache_key not in st.session_state:
     with st.spinner("计算调仓中..."):
         try:
-            st.session_state["portfolio_rebalance"] = rank(cash_available=5_000_000, top_n=15)
+            st.session_state[cache_key] = rank(cash_available=5_000_000, top_n=15, source="md")
         except Exception as e:
-            st.error(f"rank() 失败: {e}")
-            st.info("fallback: 用本地 rank_local()")
+            st.warning(f"rank() 失败: {e}, fallback to rank_local()")
             from lib.portfolio_local import rank_local
-            st.session_state["portfolio_rebalance"] = rank_local(cash_available=5_000_000, top_n=15)
+            st.session_state[cache_key] = rank_local(cash_available=5_000_000, top_n=15)
 
-result = st.session_state["portfolio_rebalance"]
+result = st.session_state[cache_key]
 
 st.subheader("当前持仓")
 holdings = st.data_editor(
@@ -37,25 +40,19 @@ with col3:
 if refresh:
     with st.spinner("重算中..."):
         try:
-            st.session_state["portfolio_rebalance"] = rank(
-                cash_available=cash, top_n=top_n, source="md"
-            )
-        except Exception as e:
+            st.session_state[cache_key] = rank(cash_available=cash, top_n=top_n, source="md")
+        except Exception:
             from lib.portfolio_local import rank_local
-            st.session_state["portfolio_rebalance"] = rank_local(
-                cash_available=cash, top_n=top_n
-            )
+            st.session_state[cache_key] = rank_local(cash_available=cash, top_n=top_n)
     st.rerun()
 
 # Show rebalance suggestions
 if result and result.get("buy_list"):
     st.subheader(f"调仓建议 — BUY {len(result['buy_list'])} 只")
-
     buy_df = pd.DataFrame(result["buy_list"])
     height = min(1500, max(300, len(buy_df) * 28 + 60))
     st.dataframe(buy_df, width="stretch", height=height, hide_index=True)
 
-    # Sector allocation
     if result.get("sector_allocation"):
         st.subheader("行业分布")
         sector_df = pd.DataFrame([
@@ -63,10 +60,11 @@ if result and result.get("buy_list"):
             for k, v in sorted(result["sector_allocation"].items(), key=lambda x: -x[1])
         ])
         st.dataframe(sector_df, width="stretch", height=300, hide_index=True)
-elif result:
+else:
     st.info("无可信标的 (no BUY recommendations)")
 
-# Risk warnings
+# Risk warnings (only show, don't duplicate)
 if result and result.get("risk_warnings"):
-    for w in result["risk_warnings"]:
+    unique_warnings = list(dict.fromkeys(result["risk_warnings"]))  # dedupe
+    for w in unique_warnings:
         st.warning(w)
