@@ -35,8 +35,8 @@ def test_build_stock_options_with_names():
 def test_build_stock_options_without_names():
     codes = ["600519", "000858"]
     options = build_stock_options(codes, name_map={})
-    # Without names, label == code; sorted alphabetically (e.g. "000519" < "600519")
-    assert options == [("000519", "000519"), ("600519", "600519")]
+    # Without names, label == code; sorted alphabetically ("000858" < "600519")
+    assert options == [("000858", "000858"), ("600519", "600519")]
 
 
 def test_build_stock_options_partial_names():
