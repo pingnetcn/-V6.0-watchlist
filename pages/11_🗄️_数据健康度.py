@@ -75,9 +75,13 @@ if not freshness_df.empty:
     height = min(800, max(200, len(freshness_display) * 32 + 60))
     st.dataframe(freshness_display, width="stretch", height=height, hide_index=True)
 
-    # Flag stale tables
+    # Flag stale tables (only tables WITH date_col can be "stale")
     stale = []
     for _, row in freshness_df.iterrows():
+        date_col = row.get("date_col")
+        # Skip reference tables (no date col) — they're not "stale", just don't track time
+        if date_col is None or (isinstance(date_col, float) and pd.isna(date_col)):
+            continue
         md = row.get("max_date")
         if md is None or pd.isna(md):
             stale.append((row["table_name"], "无数据"))
@@ -91,7 +95,7 @@ if not freshness_df.empty:
     if stale:
         st.warning(f"⚠️ {len(stale)} 张表数据陈旧 (>7 天): " + ", ".join(f"{t} ({a})" for t, a in stale))
     else:
-        st.success("✅ 所有表数据都在 7 天内")
+        st.success("✅ 所有有时间的表数据都在 7 天内")
 else:
     st.info("无新鲜度数据 (replica 为空?)")
 

@@ -12,14 +12,18 @@ SCHEMA_VERSION = 1
 def compute_full_health() -> dict:
     tf = table_freshness()
     today = date.today()
-    green, yellow, red = 0, 0, 0
+    green, yellow, red, reference = 0, 0, 0, 0
     for _, row in tf.iterrows():
-        md = row["max_date"]
-        # Handle None, NaT, NaN
+        date_col = row.get("date_col")
+        md = row.get("max_date")
+        # Reference table (no time column) — not stale, just no time tracking
+        if date_col is None or (isinstance(date_col, float) and pd.isna(date_col)):
+            reference += 1
+            continue
+        # Date-tracked table — check freshness
         if md is None or pd.isna(md):
             red += 1
             continue
-        # Normalize to date
         if isinstance(md, pd.Timestamp):
             md_date = md.date()
         elif isinstance(md, date):
@@ -39,7 +43,10 @@ def compute_full_health() -> dict:
             red += 1
     return {
         "table_freshness": tf,
-        "global_health": {"green": green, "yellow": yellow, "red": red},
+        "global_health": {
+            "green": green, "yellow": yellow, "red": red,
+            "reference": reference,  # tables without date col (e.g., v_industry_benchmark)
+        },
     }
 
 
