@@ -2,10 +2,22 @@
 import streamlit as st
 import pandas as pd
 from lib.history_query import compute_valuation_accuracy
+from lib import watchlist_store
+from lib.ui_helpers import build_stock_options, stock_name_map
 
 st.title("📐 估值回测")
 
-code = st.text_input("股票代码", "000999")
+watchlist = watchlist_store.list_all()
+if watchlist.empty:
+    st.info("自选股为空 — 先去 page 1 添加")
+    st.stop()
+
+codes = watchlist["code"].tolist()
+options = build_stock_options(codes, stock_name_map(codes))
+labels = [l for l, _ in options]
+values = [v for _, v in options]
+selected_label = st.selectbox("选股 (按名称排序)", labels, index=0)
+code = values[labels.index(selected_label)]
 
 df = compute_valuation_accuracy(code, horizons_days=[30, 90, 180, 365])
 
