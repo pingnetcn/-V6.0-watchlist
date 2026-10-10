@@ -6,6 +6,15 @@ from lib import watchlist_store
 from lib.db import latest_for_codes
 from components.sidebar_watchlist import render_sidebar
 
+# Reduce top padding so dataframe has more vertical room
+st.markdown(
+    "<style>"
+    ".block-container { padding-top: 2rem; padding-bottom: 0rem; }"
+    "h1 { margin-bottom: 0.5rem; }"
+    "</style>",
+    unsafe_allow_html=True,
+)
+
 
 def _fmt_pct(x):
     if x is None or (isinstance(x, float) and math.isnan(x)):
@@ -64,10 +73,12 @@ with tab1:
             display_df[col] = display_df[col].apply(_fmt_price)
 
     st.caption(f"共 {len(display_df)} 只股票 · 按 valuation_date 降序")
+    # Calculate height: ~28px per row, capped at 1500px (Streamlit recommended max)
+    dynamic_height = min(1500, max(400, len(display_df) * 28 + 60))
     st.dataframe(
         display_df,
         use_container_width=True,
-        height=800,
+        height=dynamic_height,
         hide_index=True,
     )
 
