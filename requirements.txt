@@ -8,3 +8,12 @@ duckdb==1.5.6
 pandas==2.3.3
 requests==2.32.3
 pytest==9.1.1
+# Required for lib/portfolio.rank() (main project's ReportRanker):
+# - yfinance + stockstats: stock data access
+# - langgraph + langchain + langchain-community: agent framework
+# Note: langgraph import chain is deep; install may take 2-3 min
+yfinance==0.2.40
+stockstats==0.6.4
+langgraph==0.2.0
+langchain==0.3.0
+langchain-community==0.3.0
