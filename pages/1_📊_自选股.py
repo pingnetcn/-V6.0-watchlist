@@ -1,8 +1,23 @@
 """Page 1: 自选股首页 — CRUD + 估值快照."""
+import math
 import streamlit as st
+import pandas as pd
 from lib import watchlist_store
 from lib.db import latest_for_codes
 from components.sidebar_watchlist import render_sidebar
+
+
+def _fmt_pct(x):
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return ""
+    return f"{x:+.1f}%"
+
+
+def _fmt_price(x):
+    if x is None or (isinstance(x, float) and math.isnan(x)):
+        return ""
+    return f"{x:.2f}"
+
 
 render_sidebar()
 st.title("📊 自选股")
@@ -41,23 +56,18 @@ with tab1:
     display_df = snapshot[[c for c in DISPLAY_COLS if c in snapshot.columns]].copy()
     display_df = display_df.rename(columns=COLUMN_LABELS)
 
-    # Format margin as percent string (for visual clarity)
+    # Format columns for visual clarity
     if "安全边际%" in display_df.columns:
-        display_df["安全边际%"] = display_df["安全边际%"].apply(
-            lambda x: f"{x:+.1f}%" if pd_notnull(x) else ""
-        )
-    # Format price columns
+        display_df["安全边际%"] = display_df["安全边际%"].apply(_fmt_pct)
     for col in ["现价", "评估价", "5y牛"]:
         if col in display_df.columns:
-            display_df[col] = display_df[col].apply(
-                lambda x: f"{x:.2f}" if pd_notnull(x) else ""
-            )
+            display_df[col] = display_df[col].apply(_fmt_price)
 
     st.caption(f"共 {len(display_df)} 只股票 · 按 valuation_date 降序")
     st.dataframe(
         display_df,
         use_container_width=True,
-        height=800,  # fills most of viewport
+        height=800,
         hide_index=True,
     )
 
@@ -67,16 +77,3 @@ with tab2:
 with tab3:
     audit = watchlist_store.get_audit_log(limit=50)
     st.dataframe(audit, use_container_width=True, height=600, hide_index=True)
-
-
-def pd_notnull(x):
-    """Helper: check if value is not null/NaN (avoids importing pandas at top)."""
-    try:
-        import math
-        if x is None:
-            return False
-        if isinstance(x, float) and math.isnan(x):
-            return False
-        return True
-    except Exception:
-        return True
