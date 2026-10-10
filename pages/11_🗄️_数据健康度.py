@@ -261,11 +261,12 @@ if st.button("🔄 Sync now (从主 DuckDB 同步到本地 replica)"):
             _vpy = _os.path.join(_project_root, ".venv", "Scripts", "python.exe")
             result = subprocess.run(
                 [_vpy, "-m", "scripts.sync_watchlist_data"],
-                capture_output=True, text=True, timeout=180,
+                capture_output=True, text=True,
+                encoding='utf-8', errors='replace',  # v6.97+ fix: 子进程输出 utf-8, 默认 GBK 解码会 fail → stdout=None
+                timeout=180,
                 cwd=_project_root,
             )
-            # v6.97+ fix: Python 3.14 + text=True 偶发返回 None (process_group 提前结束?)
-            # 防御性 'or ""' 避免 len(None) 报错
+            # v6.97+ fix: 即便显式 encoding 仍可能 None (罕见), 防御性 'or ""'
             _stdout = result.stdout or ""
             _stderr = result.stderr or ""
             st.code(_stdout[-3000:] if len(_stdout) > 3000 else _stdout)
