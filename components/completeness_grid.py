@@ -20,4 +20,4 @@ def render_score_one(score: dict):
 
 def render_batch_dashboard(df: pd.DataFrame):
     height = min(1500, max(300, len(df) * 28 + 60))
-    st.dataframe(df, use_container_width=True, height=height, hide_index=True)
+    st.dataframe(df, width="stretch", height=height, hide_index=True)

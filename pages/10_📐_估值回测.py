@@ -24,9 +24,9 @@ else:
     sign_df = df.groupby("horizon_days")["sign_correct"].mean().reset_index()
     sign_df["sign_correct"] = sign_df["sign_correct"].apply(lambda x: f"{x:.1%}")
     sign_df = sign_df.rename(columns={"horizon_days": "预测窗口(天)", "sign_correct": "方向正确率"})
-    st.dataframe(sign_df, use_container_width=True, height=200, hide_index=True)
+    st.dataframe(sign_df, width="stretch", height=200, hide_index=True)
 
     st.subheader("原始回测数据")
     st.caption(f"共 {len(df)} 行")
     height = min(1500, max(300, len(df) * 28 + 60))
-    st.dataframe(df, use_container_width=True, height=height, hide_index=True)
+    st.dataframe(df, width="stretch", height=height, hide_index=True)

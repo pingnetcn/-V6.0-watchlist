@@ -19,7 +19,7 @@ elif mode == "单日":
     df = show_date(target)
     if not df.empty:
         height = min(1500, max(300, len(df) * 28 + 60))
-        st.dataframe(df, use_container_width=True, height=height, hide_index=True)
+        st.dataframe(df, width="stretch", height=height, hide_index=True)
     else:
         st.info("该日期无数据")
 

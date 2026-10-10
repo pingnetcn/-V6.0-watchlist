@@ -21,7 +21,7 @@ def render_sidebar():
         st.sidebar.dataframe(
             df[["code", "note"]].fillna(""),
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
         to_remove = st.sidebar.selectbox("➖ 删除", [""] + df["code"].tolist())
         if st.sidebar.button("删除选中") and to_remove:

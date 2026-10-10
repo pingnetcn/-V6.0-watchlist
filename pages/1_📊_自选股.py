@@ -135,7 +135,7 @@ with tab1:
     dynamic_height = min(1500, max(400, len(display_df) * 28 + 60))
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width="stretch",
         height=dynamic_height,
         hide_index=True,
         column_config=col_config,
@@ -146,4 +146,4 @@ with tab2:
 
 with tab3:
     audit = watchlist_store.get_audit_log(limit=50)
-    st.dataframe(audit, use_container_width=True, height=600, hide_index=True)
+    st.dataframe(audit, width="stretch", height=600, hide_index=True)

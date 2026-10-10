@@ -46,7 +46,7 @@ col_config = {c: st.column_config.Column(c, width=COL_WIDTHS[c]) for c in displa
 dynamic_height = min(1200, max(300, len(display_df) * 28 + 60))
 st.dataframe(
     display_df,
-    use_container_width=True,
+    width="stretch",
     height=dynamic_height,
     hide_index=True,
     column_config=col_config,

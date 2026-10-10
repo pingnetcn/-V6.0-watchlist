@@ -10,7 +10,7 @@ st.subheader("当前持仓")
 holdings = st.data_editor(
     pd.DataFrame(columns=["code", "shares", "cost"]),
     num_rows="dynamic",
-    use_container_width=True,
+    width="stretch",
     height=300,
 )
 
@@ -27,9 +27,9 @@ if result:
     if isinstance(buy_list, list) and buy_list:
         buy_df = pd.DataFrame(buy_list)
         height = min(1200, max(300, len(buy_df) * 28 + 60))
-        st.dataframe(buy_df, use_container_width=True, height=height, hide_index=True)
+        st.dataframe(buy_df, width="stretch", height=height, hide_index=True)
     else:
-        st.dataframe(buy_list, use_container_width=True, height=400, hide_index=True)
+        st.dataframe(buy_list, width="stretch", height=400, hide_index=True)
 
     st.subheader("凯利公式预览")
     for holding in result.get("buy_list", [])[:5]:

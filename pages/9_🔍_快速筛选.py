@@ -29,7 +29,7 @@ if result.empty:
 else:
     height = min(1500, max(300, len(result) * 28 + 60))
     st.caption(f"匹配 {len(result)} 只")
-    st.dataframe(result, use_container_width=True, height=height, hide_index=True)
+    st.dataframe(result, width="stretch", height=height, hide_index=True)
 
     # Add to watchlist
     selected = st.multiselect("加入自选股", result["code"].tolist())

@@ -16,7 +16,7 @@ def render_single_stock_timeline(code: str, df: pd.DataFrame):
     fig.add_trace(go.Scatter(x=df["valuation_date"], y=df["bull_price_5y"], name="5y 牛", line=dict(color="lightgreen", dash="dot")))
     fig.add_trace(go.Scatter(x=df["valuation_date"], y=df["bear_price_5y"], name="5y 熊", line=dict(color="salmon", dash="dot")))
     fig.update_layout(title=f"{code} 估值历史", xaxis_title="日期", yaxis_title="价格")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_compare_timeline(codes: list[str], df: pd.DataFrame):
@@ -37,4 +37,4 @@ def render_compare_timeline(codes: list[str], df: pd.DataFrame):
             line=dict(color=palette[i % len(palette)]),
         ))
     fig.update_layout(title=f"多股评估价对比 ({len(codes)} 只)", xaxis_title="日期", yaxis_title="评估价")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")

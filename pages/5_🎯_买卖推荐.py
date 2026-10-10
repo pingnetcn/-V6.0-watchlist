@@ -22,7 +22,7 @@ render_portfolio_metrics(result)
 
 for label, key in [("BUY", "buy_list"), ("SELL", "sell_list"), ("HOLD", "hold_list")]:
     with st.expander(f"{label} ({len(result.get(key, []))})"):
-        st.dataframe(result.get(key, []), use_container_width=True)
+        st.dataframe(result.get(key, []), width="stretch")
 
 if st.button("📥 导出 Markdown"):
     md = format_markdown(result)
