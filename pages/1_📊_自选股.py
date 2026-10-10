@@ -16,7 +16,12 @@ if df.empty:
 
 with tab1:
     codes = df["code"].tolist()
-    snapshot = latest_for_codes(codes)
+    try:
+        snapshot = latest_for_codes(codes)
+    except RuntimeError as e:
+        st.error(f"⚠️ DuckDB 暂时被主项目 (8905) 占用。{e}")
+        st.info("请稍候刷新 (Ctrl+R) — 通常几秒后主项目写完就释放锁。")
+        st.stop()
     st.dataframe(snapshot, use_container_width=True)
 
 with tab2:

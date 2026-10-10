@@ -7,7 +7,7 @@ How to extend:
     NEVER add write functions; this module is read-only by design
 
 Public API:
-    get_conn() -> duckdb.DuckDBPyConnection      (read_only=True, singleton)
+    get_conn() -> duckdb.DuckDBPyConnection      (read_only=True, singleton with retry)
     valuation_history_query(code, since, until, limit) -> DataFrame
     valuation_snapshot(target_date) -> DataFrame
     latest_for_codes(codes) -> DataFrame
@@ -16,6 +16,7 @@ Public API:
     coverage_stats(table, column) -> dict
     column_exists(table, column) -> bool
 """
+import time
 import duckdb
 import pandas as pd
 from typing import Optional
@@ -41,11 +42,50 @@ CORE_TABLES = [
 _conn = None
 
 
+def _is_alive(conn) -> bool:
+    try:
+        conn.execute("SELECT 1").df()
+        return True
+    except Exception:
+        return False
+
+
 def get_conn() -> duckdb.DuckDBPyConnection:
+    """Get read-only DuckDB connection with retry on file-lock conflicts.
+
+    Main project (port 8905) often holds the DuckDB file briefly during writes.
+    DuckDB 1.5.6 on Windows can refuse concurrent opens even for read_only.
+    We retry up to 8 times (totaling ~6s of backoff) before giving up.
+    """
     global _conn
-    if _conn is None:
-        _conn = duckdb.connect(str(DB_PATH), read_only=True)
-    return _conn
+    if _conn is not None and _is_alive(_conn):
+        return _conn
+    if _conn is not None:
+        try:
+            _conn.close()
+        except Exception:
+            pass
+        _conn = None
+
+    last_err = None
+    for attempt in range(8):
+        try:
+            _conn = duckdb.connect(str(DB_PATH), read_only=True)
+            return _conn
+        except duckdb.IOException as e:
+            last_err = e
+            msg = str(e).lower()
+            if "already open" in msg or "locked" in msg or "being used" in msg:
+                time.sleep(0.2 * (attempt + 1))  # 0.2, 0.4, ..., 1.6
+                continue
+            raise
+
+    raise RuntimeError(
+        f"DuckDB file is held by another process (likely main 8905 doing a write). "
+        f"After 8 retries (~6s), could not open {DB_PATH}. "
+        f"Either wait for main to finish, or briefly stop the main app. "
+        f"Underlying error: {last_err}"
+    )
 
 
 def valuation_history_query(
