@@ -25,8 +25,9 @@ def compute_kelly_preview(holding: dict) -> dict:
         rr_tier=holding.get("rr_tier", 3),
     )
     out = build_kelly_blocks(inp)
+    # Real KellyOutput fields: f_star, position, gate_factor (NOT position_pct / phil_town_factor)
     return {
         "f_star": getattr(out, "f_star", 0),
-        "position_pct": getattr(out, "position_pct", 0),
-        "phil_town_factor": getattr(out, "phil_town_factor", 1.0),
+        "position_pct": getattr(out, "position", 0),
+        "phil_town_factor": getattr(out, "gate_factor", 1.0),
     }
